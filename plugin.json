@@ -3,30 +3,27 @@
   "schemaVersion": 1,
   "id": "ihub-plugin-translate",
   "name": "Translate",
-  "version": "0.1.0",
-  "description": "Translate selected text with configurable providers and copy-ready results.",
+  "version": "1.0.0",
+  "description": "Consent-first LibreTranslate-compatible translation with an explicit HTTPS endpoint and session-only API key.",
   "author": "iHub",
   "license": "MIT",
   "repository": "https://github.com/neko233-com/ihub-plugin-translate",
   "engines": { "ihub": ">=0.1.0", "api": "^1.0.0" },
   "entry": { "frontend": "dist/index.html" },
-  "activationEvents": ["onCommand:translate-text", "onSearch"],
+  "activationEvents": ["onCommand:open-translate"],
   "contributes": {
     "commands": [
-      { "id": "translate-text", "title": "Translate text", "keywords": ["translate", "translation", "语言"] }
-    ],
-    "searchProviders": [
-      { "id": "translate", "title": "Translate", "trigger": "tr ", "priority": 30 }
-    ],
-    "settings": [
-      { "key": "provider", "title": "Translation provider", "type": "select", "default": "deepl", "options": [{ "label": "DeepL", "value": "deepl" }, { "label": "Google Cloud Translation", "value": "google" } ] },
-      { "key": "apiKey", "title": "Provider API key", "type": "string", "secret": true }
+      {
+        "id": "open-translate",
+        "title": "Open Translate",
+        "subtitle": "Translate only after you choose an HTTPS LibreTranslate-compatible endpoint",
+        "keywords": ["translate", "translation", "语言", "翻译"]
+      }
     ]
   },
   "permissions": {
-    "network": { "allow": ["https://api.deepl.com", "https://api-free.deepl.com", "https://translation.googleapis.com"] },
-    "clipboard": { "read": true, "write": true },
-    "notifications": true
+    "network": { "allow": ["user-configured HTTPS LibreTranslate-compatible endpoint"] },
+    "clipboard": { "write": true }
   },
   "update": { "channel": "stable", "autoUpdate": true }
 }

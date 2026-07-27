@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Translate · iHub</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --canvas: #171a1b;
+        --surface: #202526;
+        --surface-raised: #292f30;
+        --line: rgba(229, 239, 235, 0.13);
+        --line-strong: rgba(229, 239, 235, 0.24);
+        --text: #f2f5f3;
+        --muted: #9ba6a1;
+        --quiet: #69746f;
+        --accent: #65d2b0;
+        --accent-deep: #193e35;
+        --danger: #f2917f;
+        --shadow: rgba(0, 0, 0, 0.35);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; }
+      body {
+        margin: 0;
+        min-width: 620px;
+        background:
+          radial-gradient(circle at 80% -18%, rgba(101, 210, 176, 0.11), transparent 31rem),
+          var(--canvas);
+        color: var(--text);
+      }
+
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      button:disabled { cursor: wait; opacity: 0.56; }
+
+      .app {
+        width: min(100%, 1140px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: clamp(26px, 5vw, 64px);
+        animation: enter 360ms cubic-bezier(.2, .8, .2, 1) both;
+      }
+
+      .masthead {
+        display: flex;
+        justify-content: space-between;
+        gap: 28px;
+        align-items: flex-start;
+        padding-bottom: 30px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 720;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 5px rgba(101, 210, 176, 0.11);
+        content: "";
+      }
+
+      h1 { margin: 0; font-size: clamp(34px, 5vw, 54px); letter-spacing: -0.055em; line-height: 0.97; }
+      .lede { max-width: 630px; margin: 15px 0 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+      .session-mark { color: var(--quiet); font-size: 12px; line-height: 1.55; text-align: right; }
+      .session-mark strong { display: block; color: #cbd3cf; font-size: 13px; letter-spacing: 0.02em; }
+
+      .privacy {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px 15px;
+        align-items: start;
+        margin: 28px 0 0;
+        padding: 16px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .privacy-icon {
+        display: grid;
+        width: 31px;
+        height: 31px;
+        place-items: center;
+        border: 1px solid rgba(101, 210, 176, 0.38);
+        border-radius: 50%;
+        color: var(--accent);
+        font-size: 15px;
+      }
+      .privacy p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+      .privacy strong { color: var(--text); }
+
+      .workspace { margin-top: 31px; }
+      .endpoint-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 14px 20px;
+        align-items: end;
+        padding: 0 0 27px;
+        border-bottom: 1px solid var(--line);
+      }
+      .endpoint-row .field:first-child { grid-column: 1 / -1; }
+
+      .field { display: grid; gap: 8px; }
+      .field label, .pane-label { color: #dce4e0; font-size: 12px; font-weight: 690; letter-spacing: 0.045em; }
+      .field-note { color: var(--quiet); font-size: 11px; line-height: 1.45; }
+      .field-note code, .footer code { color: #aab7b0; }
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        outline: none;
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--text);
+        border-radius: 10px;
+        transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+      }
+      input, select { height: 42px; padding: 0 12px; }
+      textarea { min-height: 265px; padding: 15px 16px; resize: vertical; line-height: 1.65; }
+      input::placeholder, textarea::placeholder { color: #65716c; }
+      input:focus, select:focus, textarea:focus {
+        border-color: rgba(101, 210, 176, 0.72);
+        background: rgba(101, 210, 176, 0.055);
+        box-shadow: 0 0 0 4px rgba(101, 210, 176, 0.09);
+      }
+      input[type="password"] { letter-spacing: 0.12em; }
+
+      .translate-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+        gap: clamp(22px, 4vw, 44px);
+        padding: 31px 0;
+      }
+      .rule { background: var(--line); }
+      .pane { min-width: 0; }
+      .pane-header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin: 0 0 11px; }
+      .counter { color: var(--quiet); font-size: 11px; }
+      #translated-text { background: rgba(255, 255, 255, 0.038); }
+
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding-top: 1px;
+      }
+      .action-set { display: flex; flex-wrap: wrap; gap: 9px; }
+      .button {
+        min-height: 39px;
+        padding: 0 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        background: transparent;
+        color: #d6dfdb;
+        font-weight: 650;
+        font-size: 13px;
+        transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+      }
+      .button:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(231, 242, 236, 0.44); background: rgba(255, 255, 255, 0.055); }
+      .button.primary { border-color: transparent; background: var(--accent); color: #11221d; box-shadow: 0 7px 20px rgba(55, 169, 137, 0.2); }
+      .button.primary:hover:not(:disabled) { background: #84dfc1; }
+      .button.danger { color: #f6b1a3; }
+      .status { min-height: 19px; color: var(--muted); font-size: 12px; line-height: 1.45; text-align: right; }
+      .status[data-tone="success"] { color: var(--accent); }
+      .status[data-tone="error"] { color: var(--danger); }
+      .status[data-tone="working"]::before {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin: 0 7px 1px 0;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 980ms ease-in-out infinite;
+        content: "";
+      }
+
+      .footer { margin-top: 38px; color: var(--quiet); font-size: 11px; line-height: 1.6; }
+
+      @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 50% { opacity: .32; transform: scale(.76); } }
+      @media (max-width: 760px) {
+        body { min-width: 0; }
+        .app { padding: 24px 20px; }
+        .masthead { display: block; }
+        .session-mark { margin-top: 19px; text-align: left; }
+        .endpoint-row, .translate-grid { grid-template-columns: 1fr; }
+        .endpoint-row .field:first-child { grid-column: auto; }
+        .rule { display: none; }
+        .translate-grid { gap: 27px; }
+        .actions { align-items: flex-start; flex-direction: column; }
+        .status { text-align: left; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">iHub official plugin</p>
+          <h1>Translate</h1>
+          <p class="lede">选择你信任的 LibreTranslate 兼容 HTTPS 服务，再显式发送这一次文本。</p>
+        </div>
+        <div class="session-mark">
+          <strong>SESSION ONLY</strong>
+          endpoint 与 API key 不写入设置或本地存储
+        </div>
+      </header>
+
+      <section class="privacy" aria-label="网络与隐私说明">
+        <span class="privacy-icon" aria-hidden="true">↗</span>
+        <p><strong>默认不连接任何翻译服务。</strong>只有点击“翻译”后，当前文本、语言和可选 API key 才会通过 HTTPS 发给你填写的服务端。请求不携带 cookie 或 referrer；服务端自身的数据处理规则由你选择的提供方决定。</p>
+      </section>
+
+      <form id="translate-form" class="workspace" autocomplete="off">
+        <div class="endpoint-row">
+          <div class="field">
+            <label for="endpoint">LibreTranslate 兼容 HTTPS endpoint</label>
+            <input id="endpoint" name="endpoint" type="url" inputmode="url" placeholder="https://translate.example.com/translate" spellcheck="false" required />
+            <span class="field-note">不设默认服务。可填服务根地址或完整 <code>/translate</code> 地址；插件会拒绝 HTTP、内嵌账号和 query 参数。</span>
+          </div>
+          <div class="field">
+            <label for="api-key">API key（可选）</label>
+            <input id="api-key" name="api-key" type="password" autocomplete="off" placeholder="仅当前页面会话" />
+            <span class="field-note">仅在本次请求体中使用，不保存。</span>
+          </div>
+          <div class="field">
+            <label for="source-language">源语言</label>
+            <select id="source-language" name="source-language">
+              <option value="auto">自动检测</option>
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ru">Русский</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="target-language">目标语言</label>
+            <select id="target-language" name="target-language">
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ru">Русский</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="translate-grid">
+          <section class="pane">
+            <div class="pane-header">
+              <label class="pane-label" for="source-text">待翻译文本</label>
+              <span id="source-count" class="counter">0 / 30,000</span>
+            </div>
+            <textarea id="source-text" name="source-text" maxlength="30000" placeholder="在这里输入或粘贴文本。输入阶段完全留在本地。" required></textarea>
+          </section>
+          <div class="rule" aria-hidden="true"></div>
+          <section class="pane">
+            <div class="pane-header">
+              <label class="pane-label" for="translated-text">翻译结果</label>
+              <span id="result-count" class="counter">尚无结果</span>
+            </div>
+            <textarea id="translated-text" readonly aria-label="翻译结果" placeholder="结果会显示在这里；不会自动复制。"></textarea>
+          </section>
+        </div>
+
+        <div class="actions">
+          <div class="action-set">
+            <button id="translate" class="button primary" type="submit">翻译</button>
+            <button id="cancel" class="button danger" type="button" hidden>取消请求</button>
+            <button id="copy" class="button" type="button" disabled>复制结果</button>
+            <button id="clear-session" class="button" type="button">清除会话数据</button>
+          </div>
+          <output id="status" class="status" data-tone="ready" aria-live="polite">尚未连接服务。</output>
+        </div>
+      </form>
+
+      <p class="footer">需要服务端允许 WebView 跨域请求（CORS）。本插件没有剪贴板读取、后台翻译、默认第三方服务或静默安装更新；“复制结果”才会使用 <code>clipboard.write</code> 权限。</p>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

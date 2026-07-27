@@ -1,0 +1,16 @@
+{
+  "name": "ihub-plugin-translate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Consent-first LibreTranslate-compatible translation plugin for iHub.",
+  "scripts": {
+    "check": "tsc --noEmit -p tsconfig.json",
+    "build": "pnpm run check && node scripts/build.mjs && tsc -p tsconfig.build.json",
+    "verify": "pnpm run build && node scripts/verify-dist.mjs"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.9.0"
+}
