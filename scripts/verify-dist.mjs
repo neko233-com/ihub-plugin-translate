@@ -13,7 +13,7 @@ const main = await read("dist/main.js");
 
 const exactNetworkPermission = ["user-configured HTTPS LibreTranslate-compatible endpoint"];
 if (
-  manifest.version !== "1.0.0"
+  manifest.version !== "1.0.1"
   || manifest.entry?.frontend !== "dist/index.html"
   || JSON.stringify(manifest.permissions?.network?.allow) !== JSON.stringify(exactNetworkPermission)
   || manifest.permissions?.clipboard?.write !== true

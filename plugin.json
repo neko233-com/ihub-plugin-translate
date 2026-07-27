@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "id": "ihub-plugin-translate",
   "name": "Translate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Consent-first LibreTranslate-compatible translation with an explicit HTTPS endpoint and session-only API key.",
   "author": "iHub",
   "license": "MIT",

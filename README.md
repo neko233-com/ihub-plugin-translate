@@ -13,7 +13,7 @@
 
 ## 更新行为
 
-清单的 `update.autoUpdate: true` 允许 iHub 自动检查 stable 更新；安装或替换版本仍应由 iHub 向用户展示变更与权限后确认。本插件不自行下载、静默安装或在后台执行更新。
+清单的 `update.autoUpdate: true` 允许 iHub 自动检查 stable 更新；发现后，用户仍需明确选择应用更新。本插件不自行下载、静默安装或在后台执行更新。
 
 ## 服务兼容性
 
