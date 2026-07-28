@@ -3,27 +3,36 @@
   "schemaVersion": 1,
   "id": "ihub-plugin-translate",
   "name": "Translate",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Consent-first LibreTranslate-compatible translation with an explicit HTTPS endpoint and session-only API key.",
   "author": "iHub",
   "license": "MIT",
   "repository": "https://github.com/neko233-com/ihub-plugin-translate",
   "engines": { "ihub": ">=0.1.0", "api": "^1.0.0" },
   "entry": { "frontend": "dist/index.html" },
-  "activationEvents": ["onCommand:open-translate"],
+  "activationEvents": ["onCommand:open-translate", "onCommand:translate-launcher-text"],
   "contributes": {
     "commands": [
       {
         "id": "open-translate",
         "title": "Open Translate",
         "subtitle": "Translate only after you choose an HTTPS LibreTranslate-compatible endpoint",
-        "keywords": ["translate", "translation", "语言", "翻译"]
+        "keywords": ["translate", "translation", "语言", "翻译"],
+        "execution": "frontend"
+      },
+      {
+        "id": "translate-launcher-text",
+        "title": "Translate selected text",
+        "subtitle": "Receive one explicit text handoff, then choose an HTTPS translation endpoint",
+        "keywords": ["translate", "selection", "text", "context", "语言", "翻译", "文本"],
+        "execution": "frontend"
       }
     ]
   },
   "permissions": {
     "network": { "allow": ["user-configured HTTPS LibreTranslate-compatible endpoint"] },
-    "clipboard": { "write": true }
+    "clipboard": { "write": true },
+    "launcherContext": { "text": true }
   },
   "update": { "channel": "stable", "autoUpdate": true }
 }

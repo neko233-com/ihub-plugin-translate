@@ -19,6 +19,7 @@ function isTranslationResponse(value) {
     return isRecord(value) && typeof value.translatedText === "string";
 }
 let hostCallSequence = 0;
+const commandHandlers = new Map();
 function callHost(method, params = {}) {
     if (window.parent === window) {
         return Promise.reject(new Error("The iHub host bridge is unavailable in a standalone browser preview."));
@@ -63,17 +64,26 @@ function callHost(method, params = {}) {
         }, "*");
     });
 }
-function callHostLifecycle(method) {
-    if (window.parent === window) {
-        return;
-    }
-    window.parent.postMessage({
-        channel: FRAME_REQUEST_CHANNEL,
-        type: "call",
-        id: `translate-${Date.now().toString(36)}-${(hostCallSequence++).toString(36)}`,
-        request: { pluginId: PLUGIN_ID, method, params: {} },
-    }, "*");
-}
+const ihub = {
+    commands: {
+        async register(definition, handler) {
+            if (commandHandlers.has(definition.id)) {
+                throw new Error(`Duplicate Translate command: ${definition.id}`);
+            }
+            commandHandlers.set(definition.id, handler);
+            try {
+                await callHost("commands.register", { definition: definition });
+            }
+            catch (error) {
+                commandHandlers.delete(definition.id);
+                throw error;
+            }
+        },
+    },
+    launcherContext: {
+        consume: (contextId) => callHost("launcherContext.consume", { contextId }),
+    },
+};
 const form = requiredElement("translate-form");
 const endpoint = requiredElement("endpoint");
 const apiKey = requiredElement("api-key");
@@ -89,6 +99,7 @@ const copyButton = requiredElement("copy");
 const clearSessionButton = requiredElement("clear-session");
 const statusOutput = requiredElement("status");
 let activeRequest = null;
+let translationSequence = 0;
 function setStatus(message, tone = "ready") {
     statusOutput.textContent = message;
     statusOutput.dataset.tone = tone;
@@ -171,6 +182,7 @@ async function translate() {
         setStatus(error instanceof Error ? error.message : "请检查翻译输入。", "error");
         return;
     }
+    const requestSequence = ++translationSequence;
     const controller = new AbortController();
     activeRequest = controller;
     setBusy(true);
@@ -196,10 +208,16 @@ async function translate() {
         if (!isTranslationResponse(data) || data.translatedText.trim().length === 0) {
             throw new Error("The selected service returned no translatedText value.");
         }
+        if (requestSequence !== translationSequence) {
+            return;
+        }
         translatedText.value = data.translatedText;
         setStatus("翻译完成。结果仍只在当前页面，点击“复制结果”才会写入剪贴板。", "success");
     }
     catch (error) {
+        if (requestSequence !== translationSequence) {
+            return;
+        }
         if (controller.signal.aborted) {
             setStatus("请求已取消或在 30 秒后超时。没有新的结果被复制或保存。", "ready");
         }
@@ -245,6 +263,7 @@ async function copyResult() {
     }
 }
 function clearSession() {
+    translationSequence += 1;
     activeRequest?.abort();
     activeRequest = null;
     endpoint.value = "";
@@ -267,6 +286,102 @@ copyButton.addEventListener("click", () => void copyResult());
 clearSessionButton.addEventListener("click", clearSession);
 sourceText.addEventListener("input", updateCounters);
 translatedText.addEventListener("input", updateCounters);
+function parseCommandInvocation(value) {
+    if (!isRecord(value) || typeof value.requestId !== "string" || typeof value.commandId !== "string") {
+        return null;
+    }
+    const rawTransfer = value.launcherContext;
+    if (rawTransfer === undefined) {
+        return { requestId: value.requestId, commandId: value.commandId };
+    }
+    if (!isRecord(rawTransfer)
+        || typeof rawTransfer.contextId !== "string"
+        || typeof rawTransfer.expiresInMs !== "number"
+        || !Number.isFinite(rawTransfer.expiresInMs)) {
+        return null;
+    }
+    return {
+        requestId: value.requestId,
+        commandId: value.commandId,
+        launcherContext: {
+            contextId: rawTransfer.contextId,
+            expiresInMs: rawTransfer.expiresInMs,
+        },
+    };
+}
+async function receiveLauncherText(invocation) {
+    const transfer = invocation.launcherContext;
+    if (!transfer) {
+        sourceText.focus();
+        setStatus("已从 iHub 命令面板打开。先填写你信任的 HTTPS endpoint，再点击翻译。", "ready");
+        return { message: "Translate is ready.", close: false };
+    }
+    // A new explicit handoff must never let an older network response overwrite
+    // its local prefill. Aborting is best-effort; the sequence is authoritative.
+    translationSequence += 1;
+    activeRequest?.abort();
+    const payload = await ihub.launcherContext.consume(transfer.contextId);
+    if (typeof payload.text !== "string") {
+        throw new Error("此次交接没有可翻译的文本。");
+    }
+    const originalLength = payload.text.length;
+    sourceText.value = payload.text.slice(0, MAX_SOURCE_LENGTH);
+    translatedText.value = "";
+    updateCounters();
+    const wasTruncated = originalLength > sourceText.value.length;
+    if (endpoint.value.trim()) {
+        sourceText.focus();
+    }
+    else {
+        endpoint.focus();
+    }
+    setStatus(wasTruncated
+        ? `已接收文本并在本页限制为 ${MAX_SOURCE_LENGTH.toLocaleString()} 个字符。选择 HTTPS endpoint 后，点击“翻译”才会发送内容。`
+        : "已接收本次文本。选择 HTTPS endpoint 后，点击“翻译”才会发送内容。", "success");
+    return { message: "Selected text received. Choose an endpoint before translating.", close: false };
+}
+async function completeCommand(invocation, ok, result, failure) {
+    await callHost("commands.complete", {
+        requestId: invocation.requestId,
+        ok,
+        result: result,
+        error: failure ?? null,
+    });
+}
+async function dispatchCommand(value) {
+    const invocation = parseCommandInvocation(value);
+    if (!invocation) {
+        return;
+    }
+    const handler = commandHandlers.get(invocation.commandId);
+    if (!handler) {
+        await completeCommand(invocation, false, {}, `Unknown Translate command: ${invocation.commandId}`);
+        return;
+    }
+    try {
+        await completeCommand(invocation, true, await handler(invocation));
+    }
+    catch (error) {
+        const failure = error instanceof Error ? error.message : String(error);
+        setStatus(`无法接收启动器文本：${failure}`, "error");
+        await completeCommand(invocation, false, {}, failure);
+    }
+}
+async function activatePlugin() {
+    await ihub.commands.register({
+        id: "open-translate",
+        title: "Open Translate",
+        subtitle: "Translate only after you choose an HTTPS LibreTranslate-compatible endpoint",
+        keywords: ["translate", "translation", "语言", "翻译"],
+    }, receiveLauncherText);
+    await ihub.commands.register({
+        id: "translate-launcher-text",
+        title: "Translate selected text",
+        subtitle: "Receive one explicit text handoff, then choose an HTTPS translation endpoint",
+        keywords: ["translate", "selection", "text", "context", "语言", "翻译", "文本"],
+    }, receiveLauncherText);
+    await callHost("lifecycle.ready");
+}
 window.addEventListener("message", (event) => {
     if (event.source !== window.parent || !isRecord(event.data)) {
         return;
@@ -275,15 +390,16 @@ window.addEventListener("message", (event) => {
     if (message.channel === FRAME_RESPONSE_CHANNEL
         && message.type === "event"
         && message.name === `ihub://plugin/${PLUGIN_ID}/command`) {
-        sourceText.focus();
-        setStatus("已从命令面板打开。先填写你信任的 HTTPS endpoint，再点击翻译。", "ready");
+        void dispatchCommand(message.payload);
     }
 });
 window.addEventListener("pagehide", () => {
     activeRequest?.abort();
     apiKey.value = "";
-    callHostLifecycle("lifecycle.dispose");
+    void callHost("lifecycle.dispose").catch(() => undefined);
 });
 updateCounters();
 setStatus("尚未连接服务。", "ready");
-callHostLifecycle("lifecycle.ready");
+void activatePlugin().catch((error) => {
+    setStatus(`Translate 插件无法启动：${error instanceof Error ? error.message : String(error)}`, "error");
+});

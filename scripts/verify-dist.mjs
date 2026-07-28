@@ -13,12 +13,17 @@ const main = await read("dist/main.js");
 
 const exactNetworkPermission = ["user-configured HTTPS LibreTranslate-compatible endpoint"];
 if (
-  manifest.version !== "1.0.1"
+  manifest.version !== "1.1.0"
   || manifest.entry?.frontend !== "dist/index.html"
+  || manifest.contributes?.commands?.[0]?.id !== "open-translate"
+  || manifest.contributes?.commands?.[0]?.execution !== "frontend"
+  || manifest.contributes?.commands?.[1]?.id !== "translate-launcher-text"
+  || manifest.contributes?.commands?.[1]?.execution !== "frontend"
   || JSON.stringify(manifest.permissions?.network?.allow) !== JSON.stringify(exactNetworkPermission)
   || manifest.permissions?.clipboard?.write !== true
   || Object.keys(manifest.permissions?.clipboard ?? {}).length !== 1
-  || Object.keys(manifest.permissions ?? {}).sort().join(",") !== "clipboard,network"
+  || manifest.permissions?.launcherContext?.text !== true
+  || Object.keys(manifest.permissions ?? {}).sort().join(",") !== "clipboard,launcherContext,network"
   || manifest.update?.channel !== "stable"
   || manifest.update?.autoUpdate !== true
 ) {
@@ -51,6 +56,8 @@ for (const requiredApi of [
   "credentials: \"omit\"",
   "referrerPolicy: \"no-referrer\"",
   "clipboard.writeText",
+  "launcherContext.consume",
+  "commands.register",
   "apiKey.value = \"\"",
   "https:",
 ]) {

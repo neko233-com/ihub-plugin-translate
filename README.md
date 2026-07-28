@@ -9,7 +9,7 @@
 - API key 只保留在当前页面的密码输入框和这一次请求体中；插件不使用 iHub settings、`localStorage` 或 `sessionStorage`，关闭页面时也会清空该字段。
 - endpoint、文本和结果同样不由插件持久化；**清除会话数据** 会立即清空当前页面的四项内容。
 - 服务端的数据保留、日志、地区和使用条款由用户选择的 endpoint 决定。请只连接你信任、并允许 WebView CORS 请求的服务。
-- 清单只请求两项能力：`network`（用户配置的 HTTPS LibreTranslate 兼容 endpoint）和 `clipboard.write`（仅在点击 **复制结果** 时）。它不读取剪贴板、不后台翻译、不自动复制，也不发通知。
+- 清单只请求三项能力：`network`（用户配置的 HTTPS LibreTranslate 兼容 endpoint）、`clipboard.write`（仅在点击 **复制结果** 时）和 `launcherContext.text`。后者只允许用户明确选择 `translate-launcher-text` 前端命令时消费一次文本；到达后只预填输入框，仍必须由用户选择 endpoint 并点击 **翻译**。它不读取剪贴板、不后台翻译、不自动复制，也不发通知。
 
 ## 更新行为
 
@@ -42,7 +42,7 @@ endpoint 可填写服务根地址（插件补上 `/translate`）或完整的 `/t
 ## 包结构
 
 ```text
-plugin.json            # v1 清单；仅 network + clipboard.write
+plugin.json            # v1 清单；network + clipboard.write + launcherContext.text
 src/index.html         # 审阅友好的离线界面源
 src/main.ts            # TypeScript 请求、会话与 iHub bridge 逻辑
 scripts/build.mjs      # 从 src/ 重建提交的 dist/index.html
